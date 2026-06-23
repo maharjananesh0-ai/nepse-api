@@ -10,37 +10,43 @@ app.use(express.json());
 
 const PORT=3000;
 
-// Temporary data source function
 async function getStocks(){
 
-return [
-
+const response=await axios.get(
+'https://www.merolagani.com/LatestMarket.aspx',
 {
-id:"NABIL",
-symbol:"NABIL",
-company_name:"Nabil Bank Limited",
-ltp:"529"
-},
+headers:{
+'User-Agent':'Mozilla/5.0'
+}
+}
+);
 
-{
-id:"NICA",
-symbol:"NICA",
-company_name:"NIC Asia Bank",
-ltp:"643"
-},
+const $=cheerio.load(response.data);
 
-{
-id:"SBI",
-symbol:"SBI",
-company_name:"SBI Bank",
-ltp:"409"
+let stocks=[];
+
+$('table tbody tr').each((i,element)=>{
+
+const cols=$(element).find('td');
+
+if(cols.length>5){
+
+stocks.push({
+
+symbol:$(cols[0]).text().trim(),
+ltp:$(cols[1]).text().trim(),
+change:$(cols[2]).text().trim()
+
+});
+
 }
 
-];
+});
+
+return stocks;
 
 }
 
-// Home
 app.get("/",(req,res)=>{
 
 res.json({
@@ -49,17 +55,29 @@ status:"API Running"
 
 });
 
-// All stocks
 app.get("/stocks",async(req,res)=>{
+
+try{
 
 const stocks=await getStocks();
 
 res.json(stocks);
 
+}
+
+catch(error){
+
+res.status(500).json({
+error:error.message
 });
 
-// Single stock
+}
+
+});
+
 app.get("/live-price/:symbol",async(req,res)=>{
+
+try{
 
 const stocks=await getStocks();
 
@@ -76,6 +94,16 @@ message:"Stock not found"
 }
 
 res.json(stock);
+
+}
+
+catch(error){
+
+res.status(500).json({
+error:error.message
+});
+
+}
 
 });
 
